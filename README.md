@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mqtt_client/mqtt_client.dart';
-
-import 'mqtt_service.dart';
 
 void main() {
   runApp(MyApp());
@@ -28,80 +25,19 @@ class DoorControlPage extends StatefulWidget {
 }
 
 class _DoorControlPageState extends State<DoorControlPage> {
-  final mqttService = MQTTService();
   String doorStatus = "Unknown";
-  String connectionStatus = "Connecting...";
-  bool objectDetected = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _connectToMqtt();
-  }
-
-  Future<void> _connectToMqtt() async {
-    await mqttService.connect();
-    if (mqttService.isConnected) {
-      setState(() {
-        connectionStatus = "Connected";
-      });
-      mqttService.subscribe('home/door/status');
-      mqttService.subscribe('home/door/notification');
-
-      mqttService.client.updates!.listen((messages) {
-        final recMess = messages[0].payload as MqttPublishMessage;
-        final message = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
-        final topic = messages[0].topic;
-
-        setState(() {
-          if (topic == 'home/door/status') {
-            doorStatus = message;
-          } else if (topic == 'home/door/notification' && message == "Object detected within 15 cm") {
-            objectDetected = true;
-            _showUnlockDialog();
-          }
-        });
-      });
-    } else {
-      setState(() {
-        connectionStatus = "Connection Failed";
-      });
-    }
-  }
+  String connectionStatus = "Not Connected";
 
   void lockDoor() {
-    mqttService.publish('home/door/control', 'lock');
+    setState(() {
+      doorStatus = "Locked";
+    });
   }
 
   void unlockDoor() {
-    mqttService.publish('home/door/control', 'unlock');
-  }
-
-  void _showUnlockDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("Object Detected!"),
-          content: Text("An object is near the door. Do you want to unlock?"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                unlockDoor();
-                Navigator.of(context).pop();
-              },
-              child: Text("Unlock"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text("Cancel"),
-            ),
-          ],
-        );
-      },
-    );
+    setState(() {
+      doorStatus = "Unlocked";
+    });
   }
 
   @override
